@@ -152,7 +152,6 @@ conda create -n hitl-agent python=3.11 -y
 conda activate hitl-agent
 
 # Install dependencies
-cd assignment-5
 pip install -r backend/requirements.txt
 
 # Configure environment
@@ -176,7 +175,6 @@ You need **two terminals** — one for the backend (Python) and one for the fron
 
 **Terminal 1: Start the Backend**
 ```bash
-cd assignment-5
 conda activate hitl-agent
 python -m backend.server
 # Backend starts at http://localhost:8000
@@ -185,7 +183,7 @@ python -m backend.server
 
 **Terminal 2: Start the Frontend**
 ```bash
-cd assignment-5/frontend
+cd frontend
 npm run dev
 # Frontend starts at http://localhost:3000
 ```
@@ -360,7 +358,7 @@ validate_budget node (continues)      Modal closes, chat updates
 
 ### Testing the Frontend
 ```bash
-cd assignment-5/frontend
+cd frontend
 npm install          # Install dependencies (first time only)
 npm run dev          # Start dev server at http://localhost:3000
 ```

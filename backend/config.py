@@ -13,7 +13,7 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")  # "openai" or "google"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-GOOGLE_MODEL = os.getenv("GOOGLE_MODEL", "gemini-2.0-flash")
+GOOGLE_MODEL = os.getenv("GOOGLE_MODEL", "gemini-3.8-flash")
 
 # --- Budget Limits ---
 BUDGET_CEILING = float(os.getenv("BUDGET_CEILING", "100000"))  # $100,000 max
