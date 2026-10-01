@@ -284,14 +284,14 @@ START → submit_request → [valid?]
 ### Point Breakdown
 | Function | Points | Description |
 |----------|--------|-------------|
-| `submit_request` | 5 | Validate and submit the request |
-| `assess_risk` | 5 | LLM-based risk assessment |
-| `manager_review` | 5 | Manager interrupt + decision handling |
-| `validate_budget` | 3 | Department budget check |
-| `finance_review` | 5 | Finance team interrupt |
-| `final_signoff` | 5 | Executive interrupt |
-| `process_request` | 3 | Process approved request |
-| `handle_rejection` | 4 | Handle rejected request |
+| `submit_request` | 3 | Validate and submit the request |
+| `assess_risk` | 3 | LLM-based risk assessment |
+| `manager_review` | 3 | Manager interrupt + decision handling |
+| `validate_budget` | 1 | Department budget check |
+| `finance_review` | 3 | Finance team interrupt |
+| `final_signoff` | 3 | Executive interrupt |
+| `process_request` | 1 | Process approved request |
+| `handle_rejection` | 2 | Handle rejected request |
 | 6 routing functions | 1 each | Conditional routing |
 | `create_approval_graph` | 10 | Wire everything together |
 
