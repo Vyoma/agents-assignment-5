@@ -3,14 +3,14 @@
 ## Tech Stack
 - **Backend**: Python 3.11+, FastAPI, LangGraph, LangChain
 - **Frontend**: Next.js 15, React 19, CopilotKit, Tailwind CSS
-- **LLM**: OpenAI GPT-4o-mini (default) or Google Gemini 2.0 Flash
+- **LLM**: OpenAI GPT-4o-mini (default) or Google Gemini 3.8 Flash
 - **Persistence**: SQLite (checkpoints), SqliteSaver
 - **Evaluation**: LangSmith, RAGAS
 - **Testing**: pytest
 
 ## Project Structure
 ```
-assignment-5/
+.
 ├── backend/
 │   ├── server.py              # FastAPI + CopilotKit endpoint
 │   ├── config.py              # Env loading, LLM factory, budget limits
