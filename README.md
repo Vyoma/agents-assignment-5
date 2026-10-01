@@ -291,7 +291,7 @@ START → submit_request → [valid?]
 | `final_signoff` | 5 | Executive interrupt |
 | `process_request` | 3 | Process approved request |
 | `handle_rejection` | 4 | Handle rejected request |
-| 4 routing functions | 1 each | Conditional routing |
+| 6 routing functions | 1 each | Conditional routing |
 | `create_approval_graph` | 10 | Wire everything together |
 
 ## Part 2: Safety Guardrails (20 points)
