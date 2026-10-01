@@ -210,7 +210,7 @@ Open **http://localhost:3000** in your browser to interact with the Financial Ap
 ## Project Structure
 
 ```
-assignment-5/
+.
 ├── backend/
 │   ├── server.py                    # FastAPI + CopilotKit endpoint (GIVEN)
 │   ├── config.py                    # Environment & LLM factory (GIVEN)
@@ -220,7 +220,8 @@ assignment-5/
 │   ├── agent/
 │   │   ├── state.py                 # ApprovalState TypedDict (GIVEN)
 │   │   ├── graph.py                 # ★ StateGraph assembly (TODO)
-│   │   ├── nodes.py                 # ★ 8 nodes + 4 routers (TODO)
+│   │   ├── nodes.py                 # ★ 8 nodes + 6 routers (TODO)
+│   │   ├── demo_graph.py           # Demo graph for testing (GIVEN)
 │   │   └── checkpointer.py         # SQLite checkpointer (GIVEN)
 │   │
 │   ├── guardrails/
@@ -257,7 +258,7 @@ assignment-5/
 ## Part 1: LangGraph Workflow + Interrupts (35 points)
 
 ### Files to Implement
-- `backend/agent/nodes.py` — 8 node functions + 4 routing functions
+- `backend/agent/nodes.py` — 8 node functions + 6 routing functions
 - `backend/agent/graph.py` — StateGraph assembly
 
 ### Workflow Graph
