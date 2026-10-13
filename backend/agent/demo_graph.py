@@ -46,6 +46,13 @@ def demo_submit(state: ApprovalState) -> dict:
     dept = state.get("department", "unknown")
     return {
         "is_valid": True,
+        # The frontend reuses one thread for every request in a chat session,
+        # so clear the previous request's review state from the checkpoint.
+        "decisions": [],
+        "manager_approved": None, "manager_comments": "",
+        "finance_approved": None, "finance_comments": "",
+        "final_approved": None, "final_comments": "",
+        "department_budget": 0, "budget_remaining": 0, "within_budget": True,
         "current_stage": "risk_assessment",
         "status": "pending",
         "messages": [
@@ -112,7 +119,7 @@ def demo_manager_review(state: ApprovalState) -> dict:
     return {
         "manager_approved": approved,
         "manager_comments": comments,
-        "decisions": [{"stage": "manager_review", "approved": approved, "reviewer": "Manager (demo)", "comments": comments}],
+        "decisions": state.get("decisions", []) + [{"stage": "manager_review", "approved": approved, "reviewer": "Manager (demo)", "comments": comments}],
         "messages": [_decision_message("Manager", approved, comments)],
     }
 
@@ -135,7 +142,7 @@ def demo_finance_review(state: ApprovalState) -> dict:
     return {
         "finance_approved": approved,
         "finance_comments": comments,
-        "decisions": [{"stage": "finance_review", "approved": approved, "reviewer": "Finance (demo)", "comments": comments}],
+        "decisions": state.get("decisions", []) + [{"stage": "finance_review", "approved": approved, "reviewer": "Finance (demo)", "comments": comments}],
         "messages": [_decision_message("Finance", approved, comments)],
     }
 
@@ -158,7 +165,7 @@ def demo_final_signoff(state: ApprovalState) -> dict:
     return {
         "final_approved": approved,
         "final_comments": comments,
-        "decisions": [{"stage": "final_signoff", "approved": approved, "reviewer": "Executive (demo)", "comments": comments}],
+        "decisions": state.get("decisions", []) + [{"stage": "final_signoff", "approved": approved, "reviewer": "Executive (demo)", "comments": comments}],
         "messages": [_decision_message("Executive", approved, comments)],
     }
 

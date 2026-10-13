@@ -42,6 +42,9 @@ def submit_request(state: ApprovalState) -> dict:
     Hints:
     - validate_request() returns (is_valid: bool, message: str)
     - Return dict with keys: is_valid, validation_message, current_stage, status, messages
+    - Also reset the previous request's review state ("decisions": [], manager_approved /
+      finance_approved / final_approved: None, ...): the frontend reuses one thread for
+      every request in a chat session, so old values are still in the checkpoint
     """
     raise NotImplementedError("TODO: Implement submit_request node (5 points)")
 
@@ -87,7 +90,13 @@ def manager_review(state: ApprovalState) -> dict:
     Hints:
     - decision = interrupt({...}) pauses the graph until user responds
     - The frontend sends the decision as a JSON string — use json.loads(decision) if it's a str
-    - Append to decisions list: {"stage": "manager_review", "approved": ..., "reviewer": "Manager", "comments": ...}
+    - Append to decisions list: {"stage": "manager_review", "approved": ...,
+      "decision": "approved" | "rejected", "reviewer": "Manager", "comments": ...,
+      "reasoning": ...}  ("decision" and "reasoning" are the keys the Part 5 audit-trail
+      evaluator checks)
+    - ApprovalState.decisions has no reducer, so return the whole list:
+      {"decisions": state.get("decisions", []) + [entry]}; returning [entry] alone
+      overwrites the earlier decisions (same for finance_review and final_signoff)
     - The route_after_manager router decides the next step based on approval + risk_level
     """
     raise NotImplementedError("TODO: Implement manager_review node (5 points)")
