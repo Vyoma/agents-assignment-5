@@ -8,9 +8,11 @@ langchain-core>=0.3.0
 # LangSmith
 langsmith>=0.2.0
 
-# CopilotKit + AG-UI
-copilotkit>=0.1.0
-ag-ui-langgraph>=0.0.20
+# CopilotKit + AG-UI (tested with the frontend's @copilotkit/* 1.78.0, which
+# still resumes interrupts via forwardedProps.command.resume; ag-ui-langgraph
+# 0.0.47 already marks that path deprecated)
+copilotkit==0.1.96
+ag-ui-langgraph==0.0.47
 
 # FastAPI
 fastapi>=0.115.0
