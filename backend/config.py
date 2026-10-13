@@ -22,7 +22,7 @@ DEPARTMENT_BUDGETS = {
     "marketing": 30000,
     "operations": 40000,
     "research": 60000,
-    "hr": 25000,
+    "hr": 5000,  # below the $10k low-risk ceiling, so "low risk + over budget" (EVAL-011) is reachable
 }
 VALID_DEPARTMENTS = list(DEPARTMENT_BUDGETS.keys())
 

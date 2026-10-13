@@ -25,7 +25,7 @@ DEPARTMENT_BUDGETS = {
     "marketing": 30000,
     "operations": 40000,
     "research": 60000,
-    "hr": 25000,
+    "hr": 5000,
 }
 
 DATASET_SCHEMA = {
@@ -65,6 +65,12 @@ Business Rules:
   Path: submit_request → handle_rejection
 - Priority "urgent" + amount > $50,000: critical risk, needs 3 reviews
   Path: submit_request → assess_risk → manager_review → finance_review → final_signoff → process_request
+- Department budgets: engineering $50,000, marketing $30,000, operations $40,000,
+  research $60,000, hr $5,000. validate_budget escalates when the amount is over budget:
+  - Low risk over budget: manager review (1 human review)
+    Path: submit_request → assess_risk → validate_budget → manager_review → process_request
+  - Medium risk over budget: finance review after the budget check (2 human reviews)
+    Path: submit_request → assess_risk → manager_review → validate_budget → finance_review → process_request
 
 Valid departments: {departments}
 Valid priorities: low, normal, high, urgent
@@ -92,6 +98,9 @@ Business Rules:
 - Amounts > $100,000: REJECTED (exceeds ceiling)
 - Negative amounts: REJECTED
 - Priority "urgent" + amount > $50,000: critical risk, 3 reviews
+- Over the department budget (engineering $50,000, marketing $30,000, operations $40,000,
+  research $60,000, hr $5,000): low risk adds a manager review (1 review), medium risk
+  adds a finance review after the budget check (2 reviews)
 
 Valid departments: {departments}
 
