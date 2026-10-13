@@ -64,8 +64,9 @@ def check_page_has_copilot_chat():
             print("[PASS] page.tsx contains 'CopilotChat'")
             return True
         else:
-            print("[INFO] page.tsx does not yet contain 'CopilotChat' — student TODO")
-            return True  # Expected for stub
+            # Part 3 is GIVEN, so a missing CopilotChat means the provided UI is broken
+            print("[FAIL] page.tsx does not contain 'CopilotChat'")
+            return False
     except FileNotFoundError:
         print("[FAIL] page.tsx not found")
         return False
@@ -82,8 +83,9 @@ def check_approval_panel_has_interrupt():
             print("[PASS] ApprovalPanel.tsx contains 'useLangGraphInterrupt'")
             return True
         else:
-            print("[INFO] ApprovalPanel.tsx does not yet contain 'useLangGraphInterrupt' — student TODO")
-            return True  # Expected for stub
+            # Part 3 is GIVEN, so a missing useLangGraphInterrupt means the provided UI is broken
+            print("[FAIL] ApprovalPanel.tsx does not contain 'useLangGraphInterrupt'")
+            return False
     except FileNotFoundError:
         print("[FAIL] ApprovalPanel.tsx not found")
         return False

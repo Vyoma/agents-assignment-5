@@ -7,7 +7,6 @@ routing functions, and escalation logic without requiring API keys.
 
 import sys
 import os
-import inspect
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -108,14 +107,48 @@ def check_routing_functions():
     return results
 
 
+# Full request state for running a review node on its own (no LLM needed).
+SAMPLE_REVIEW_STATE = {
+    "messages": [],
+    "request_id": "TEST-001", "title": "Server cluster", "description": "Replace failed cluster",
+    "amount": 95000.0, "department": "engineering", "requester": "Test User",
+    "justification": "Production down", "priority": "urgent",
+    "risk_level": "critical", "risk_reasoning": "Urgent and over $50,000",
+    "is_valid": True, "validation_message": "",
+    "manager_approved": True, "manager_comments": "ok",
+    "finance_approved": True, "finance_comments": "ok",
+    "final_approved": None, "final_comments": "",
+    "department_budget": 50000.0, "budget_remaining": -45000.0, "within_budget": False,
+    "current_stage": "review", "status": "pending", "decisions": [],
+}
+
+
+def _pauses_on_interrupt(fn):
+    """Run fn as the only node of a graph; True if it pauses on interrupt()."""
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.graph import StateGraph, START, END
+    from backend.agent.state import ApprovalState
+
+    graph = StateGraph(ApprovalState)
+    graph.add_node("node", fn)
+    graph.add_edge(START, "node")
+    graph.add_edge("node", END)
+    app = graph.compile(checkpointer=MemorySaver())
+    result = app.invoke(dict(SAMPLE_REVIEW_STATE), {"configurable": {"thread_id": "interrupt-check"}})
+    return "__interrupt__" in result
+
+
 def check_interrupt_usage():
-    """Verify that interrupt() is used in the 3 expected node functions."""
+    """Verify that the 3 review nodes pause the graph with interrupt().
+
+    The node is executed, not searched as text: the stub docstrings mention
+    interrupt(), so a source-text check passed even when no node called it.
+    """
     interrupt_nodes = ["manager_review", "finance_review", "final_signoff"]
     results = []
 
     try:
         from backend.agent import nodes
-        source = inspect.getsource(nodes)
 
         for name in interrupt_nodes:
             fn = getattr(nodes, name, None)
@@ -124,13 +157,23 @@ def check_interrupt_usage():
                 results.append(False)
                 continue
 
-            fn_source = inspect.getsource(fn)
-            if "interrupt(" in fn_source:
-                print(f"[PASS] '{name}' contains interrupt() call")
+            try:
+                paused = _pauses_on_interrupt(fn)
+            except NotImplementedError:
+                print(f"[EXPECTED] '{name}' raises NotImplementedError (student TODO)")
+                results.append(True)
+                continue
+            except Exception as e:
+                print(f"[FAIL] '{name}' raised {type(e).__name__}: {e}")
+                results.append(False)
+                continue
+
+            if paused:
+                print(f"[PASS] '{name}' pauses the graph with interrupt()")
                 results.append(True)
             else:
-                print(f"[INFO] '{name}' does not yet contain interrupt() — student TODO")
-                results.append(True)  # Expected for stubs
+                print(f"[FAIL] '{name}' ran without calling interrupt()")
+                results.append(False)
     except ImportError as e:
         print(f"[FAIL] Cannot import nodes module: {e}")
         return [False]
