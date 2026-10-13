@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useCopilotChat } from "@copilotkit/react-core";
+import { useCoAgent, useCopilotChat } from "@copilotkit/react-core";
+import { Role, TextMessage } from "@copilotkit/runtime-client-gql";
 import { Department, FinancialRequest } from "@/lib/types";
 
 const DEPARTMENTS: Department[] = ["engineering", "marketing", "operations", "research", "hr"];
 const PRIORITIES = ["low", "normal", "high", "urgent"];
 
 export default function RequestForm() {
-  const { append } = useCopilotChat();
+  const { appendMessage } = useCopilotChat();
+  // The graph reads request fields (amount, department, ...) from state, not from chat text,
+  // so the form also writes them into the agent state that is sent with the run.
+  const { setState } = useCoAgent<Partial<FinancialRequest>>({ name: "approval_agent" });
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -32,7 +36,17 @@ export default function RequestForm() {
 - Description: ${formData.description}
 - Justification: ${formData.justification}`;
 
-    append({ role: "user", content: message });
+    setState({
+      request_id: `REQ-${Date.now()}`,
+      title: formData.title,
+      description: formData.description,
+      amount: parseFloat(formData.amount),
+      department: formData.department,
+      requester: formData.requester,
+      justification: formData.justification,
+      priority: formData.priority as FinancialRequest["priority"],
+    });
+    appendMessage(new TextMessage({ role: Role.User, content: message }));
 
     setFormData({
       title: "",
