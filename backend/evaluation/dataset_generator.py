@@ -161,12 +161,13 @@ def upload_to_langsmith(dataset, dataset_name="financial-approval-eval"):
 
     TODO (4 points):
     - Import langsmith and create a Client: client = langsmith.Client()
-    - Create a new dataset: client.create_dataset(dataset_name=dataset_name)
+    - Create a new dataset: ls_dataset = client.create_dataset(dataset_name=dataset_name)
+      (use a new name; the `dataset` argument is your list of test cases)
     - For each test case in the dataset, create an example:
         client.create_example(
             inputs=case["input"],
             outputs=case["expected"],
-            dataset_id=dataset.id,
+            dataset_id=ls_dataset.id,
         )
     - Return the dataset ID as a string
 
