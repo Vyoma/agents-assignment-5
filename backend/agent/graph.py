@@ -59,8 +59,9 @@ def create_approval_graph(checkpointer=None):
     - Compile and return the graph
 
     Args:
-        checkpointer: SqliteSaver checkpointer for persisting graph state
-                      across interrupt/resume cycles (passed by server.py)
+        checkpointer: checkpointer for persisting graph state across
+                      interrupt/resume cycles (server.py passes an
+                      AsyncSqliteSaver; sync scripts can pass SqliteSaver)
 
     Hints:
     - Use graph.add_node("name", function) for each node

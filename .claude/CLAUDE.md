@@ -89,7 +89,7 @@ python -m backend.evaluation.run_three_layer_eval  # Part 5 three-layer eval
 ## Key Patterns
 - **interrupt()**: Pauses graph execution, sends data to frontend
 - **Command(resume=value)**: Resumes graph with human decision
-- **SqliteSaver**: Checkpoints graph state for interrupt/resume
+- **SqliteSaver / AsyncSqliteSaver**: Checkpoints graph state for interrupt/resume (the server uses AsyncSqliteSaver because AG-UI calls the async graph API)
 - **useLangGraphInterrupt**: React hook that fires on graph interrupts
 - **resolve()**: Sends decision from frontend back to graph
 - **RAGAS metrics** (ragas==0.4.3, from ragas.metrics): ToolCallAccuracy, AgentGoalAccuracyWithReference, TopicAdherenceScore; score with `multi_turn_ascore(MultiTurnSample(...))`. There is no `ragas.metrics.TopicAdherence`, and these metrics have no `single_turn_ascore`. Faithfulness is single-turn (`SingleTurnSample`, `single_turn_ascore`).
