@@ -45,7 +45,7 @@
 └── tests/                     # Test harnesses (all GIVEN)
 ```
 
-## Student Tasks (8 files, 125 points + 25 bonus)
+## Student Tasks (7 files, 125 points + 25 bonus)
 
 ### Part 1: LangGraph Workflow (35 pts)
 - `backend/agent/nodes.py`: 8 node functions + 6 routing functions

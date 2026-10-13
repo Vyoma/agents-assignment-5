@@ -138,7 +138,7 @@ flowchart TD
 ## Prerequisites
 
 - Python 3.11+
-- Node.js 18+
+- Node.js 22 LTS (22.15 or newer: some of the pinned frontend dependencies declare `node >=22.15.0`)
 - OpenAI API key (or Google Gemini API key)
 - LangSmith API key (for Part 4)
 
@@ -190,18 +190,18 @@ npm run dev
 
 Open **http://localhost:3000** in your browser to interact with the Financial Approval System.
 
-> **Note:** Before you implement your graph, the server automatically loads a **demo graph** (`backend/agent/demo_graph.py`) so you can see the frontend and HITL interrupt flow in action. The demo has a single manager-review interrupt — submit a request and you'll see the approval modal appear. Once you implement `create_approval_graph()`, the server switches to your full graph automatically.
+> **Note:** Before you implement your graph, the server automatically loads a **demo graph** (`backend/agent/demo_graph.py`) so you can see the frontend and HITL interrupt flow in action. The demo has all three interrupts and the same routing as the assignment, but it scores risk from the amount alone (no LLM), so its risk levels can differ from the eval dataset. Submit a request of $10,000 or more with the **+ New Approval Request** form and the approval modal appears. Once you implement `create_approval_graph()`, the server switches to your full graph automatically.
 
 ### How it Works End-to-End
 
-1. **Submit a request** via the chat or the form on the right sidebar
-2. The backend LangGraph workflow processes the request through these stages:
+1. **Submit a request** with the **+ New Approval Request** form on the right sidebar. The form puts the request fields (`title`, `amount`, `department`, ...) into the graph state. A free-text chat message alone does not, so your nodes would see no `amount`.
+2. The backend LangGraph workflow processes the request through these stages (which ones run depends on the risk level, see the escalation rules above):
    - **Submit & Validate** → checks amount, department, injection patterns
    - **Risk Assessment** → LLM evaluates risk level (low/medium/high/critical)
-   - **Manager Review** → workflow **pauses** (interrupt) → **Approval Panel appears** in browser
-   - **Budget Validation** → checks against department budget limits
-   - **Finance Review** → workflow **pauses** again → **Approval Panel appears** with budget info
-   - **Final Sign-off** → workflow **pauses** one last time → **Approval Panel shows full decision chain**
+   - **Manager Review** (medium/high/critical, or low over budget) → workflow **pauses** (interrupt) → **Approval Panel appears** in browser
+   - **Budget Validation** (low/medium only) → checks against department budget limits
+   - **Finance Review** (high/critical, or medium over budget) → workflow **pauses** again → **Approval Panel appears** (budget figures are only filled in when Budget Validation ran)
+   - **Final Sign-off** (critical only) → workflow **pauses** one last time → **Approval Panel shows the decision chain**
    - **Process/Reject** → final result based on all approval decisions
 3. At each interrupt, the **Approval Panel modal** pops up showing request details
 4. Click **Approve** or **Reject** with comments to resume the workflow
@@ -253,7 +253,7 @@ Open **http://localhost:3000** in your browser to interact with the Financial Ap
 └── tests/                           # Test harnesses (GIVEN)
 ```
 
-**★ = Files you need to implement** (8 files total)
+**★ = Files you need to implement** (7 files total)
 
 ## Part 1: LangGraph Workflow + Interrupts (35 points)
 
@@ -264,15 +264,22 @@ Open **http://localhost:3000** in your browser to interact with the Financial Ap
 ### Workflow Graph
 
 ```
-START → submit_request → [valid?]
-                            ├─ No → handle_rejection → END
-                            └─ Yes → assess_risk → manager_review (INTERRUPT)
-                                                        ├─ Rejected → handle_rejection → END
-                                                        └─ Approved → validate_budget → finance_review (INTERRUPT)
-                                                                                            ├─ Rejected → handle_rejection → END
-                                                                                            └─ Approved → final_signoff (INTERRUPT)
-                                                                                                              ├─ Rejected → handle_rejection → END
-                                                                                                              └─ Approved → process_request → END
+START → submit_request ─┬─ invalid ─────────────────────────────────→ handle_rejection → END
+                        └─ valid → assess_risk ─┬─ low ────────────→ validate_budget
+                                                └─ medium/high/crit → manager_review (INTERRUPT)
+
+manager_review  ─┬─ rejected ──────────────→ handle_rejection
+                 ├─ approved + low ────────→ process_request      (low only gets here when over budget)
+                 ├─ approved + medium ─────→ validate_budget
+                 └─ approved + high/crit ──→ finance_review (INTERRUPT)
+validate_budget ─┬─ within budget ─────────→ process_request
+                 ├─ over + low ────────────→ manager_review
+                 └─ over + medium ─────────→ finance_review
+finance_review  ─┬─ rejected ──────────────→ handle_rejection
+                 ├─ approved + critical ───→ final_signoff (INTERRUPT)
+                 └─ approved + other ──────→ process_request
+final_signoff   ─┬─ approved ──────────────→ process_request → END
+                 └─ rejected ──────────────→ handle_rejection → END
 ```
 
 ### Key Concepts
@@ -324,10 +331,12 @@ The frontend is fully implemented for you. Study the code to understand how Copi
 | `frontend/src/app/layout.tsx` | Wraps the app in `<CopilotKit>` provider pointing to the backend |
 | `frontend/src/app/page.tsx` | Two-column layout: CopilotChat (left) + sidebar controls (right) |
 | `frontend/src/components/ApprovalPanel.tsx` | Modal overlay for HITL approval using `useLangGraphInterrupt` |
-| `frontend/src/components/RequestForm.tsx` | Form to submit financial requests via chat |
+| `frontend/src/components/RequestForm.tsx` | Form that sends the request fields as agent state (`useCoAgent`) plus a chat message |
 | `frontend/src/components/WorkflowStatus.tsx` | Visual step-by-step progress indicator |
 | `frontend/src/components/RequestHistory.tsx` | List of past approval requests |
 | `frontend/src/app/api/copilotkit/route.ts` | API route proxy using `LangGraphHttpAgent` |
+
+`page.tsx` renders `WorkflowStatus` and `RequestHistory` without props, so both stay in their empty state. Wiring them to the agent state is optional.
 
 ### How HITL Approvals Work (Frontend ↔ Backend)
 
@@ -355,7 +364,7 @@ validate_budget node (continues)      Modal closes, chat updates
 - **CopilotChat**: Chat interface connecting to the LangGraph agent via CopilotKit
 - **useLangGraphInterrupt**: React hook that registers a `render` callback — when the graph calls `interrupt()`, the callback receives the event data and a `resolve()` function
 - **resolve()**: Sends the human's decision as a JSON string (`JSON.stringify({approved, comments})`) back to the LangGraph workflow to resume execution
-- **SqliteSaver checkpointer**: Persists the paused graph state so the workflow survives page refreshes
+- **SQLite checkpointer** (`AsyncSqliteSaver` in `server.py`, because AG-UI calls the async graph API): Persists the paused graph state so the workflow survives page refreshes
 
 ### Testing the Frontend
 ```bash
@@ -385,6 +394,8 @@ The frontend needs the backend running (`python -m backend.server`) to function.
 ```bash
 python -m backend.evaluation.run_eval
 ```
+
+`run_eval` (and `run_three_layer_eval`) score the dataset's expected values against themselves; they do not run your graph. They check your evaluator logic, so correct evaluators print 1.00. That number is not a measure of your agent.
 
 ## Part 5: Three-Layer Evaluation Framework (50 points)
 
