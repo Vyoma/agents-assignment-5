@@ -15,12 +15,22 @@ Part 5: Three-Layer Evaluation Framework (34 points)
 
 # ---------------------------------------------------------------------------
 # RAGAS imports — Layer 2 uses these directly, Layer 3 optionally
+# (ragas==0.4.3, pinned in requirements.txt). ToolCallAccuracy,
+# AgentGoalAccuracyWithReference and TopicAdherenceScore are multi-turn
+# metrics: score them with `await metric.multi_turn_ascore(MultiTurnSample(...))`.
+# Importing from ragas.metrics prints a DeprecationWarning; ignore it. The
+# ragas.metrics.collections versions do not accept LangchainLLMWrapper.
 # ---------------------------------------------------------------------------
-# from ragas.metrics import ToolCallAccuracy, AgentGoalAccuracyWithReference, TopicAdherence
+# from ragas.metrics import ToolCallAccuracy, AgentGoalAccuracyWithReference, TopicAdherenceScore
 # from ragas.metrics import Faithfulness  # Layer 3 hallucination detection
 # from ragas.integrations.langgraph import convert_to_ragas_messages
-# from ragas.dataset_schema import MultiTurnSample
+# from ragas.dataset_schema import MultiTurnSample, SingleTurnSample
+# from ragas.messages import HumanMessage, AIMessage, ToolCall
 # from ragas.llms import LangchainLLMWrapper
+#
+# Build any metric that needs an LLM (get_llm()) INSIDE the returned evaluator,
+# not in the factory: the tests call every factory, and get_llm() raises
+# "Missing credentials" when OPENAI_API_KEY is not set (a fresh clone, or CI).
 
 # ---------------------------------------------------------------------------
 # Helper constants
@@ -151,19 +161,18 @@ def create_tool_call_accuracy_evaluator():
         def evaluator(inputs, outputs, reference_outputs) -> dict
 
     - Steps to implement:
-      1. Import and instantiate ragas.metrics.ToolCallAccuracy
+      1. Import and instantiate ragas.metrics.ToolCallAccuracy (no LLM needed)
       2. Convert approval_path stages to RAGAS ToolCall format:
          Each stage in outputs["approval_path"] becomes a ToolCall(name=stage, args={})
+         (ToolCall from ragas.messages)
       3. Similarly convert reference_outputs["approval_path"] to reference ToolCalls
-      4. Create a MultiTurnSample with the tool calls
-      5. Score using the RAGAS metric (use asyncio.run() to call .single_turn_ascore()
-         or use the synchronous wrapper)
+      4. Create a MultiTurnSample:
+           user_input=[HumanMessage(content=<request summary>),
+                       AIMessage(content=<final status>, tool_calls=<actual ToolCalls>)]
+           reference_tool_calls=<reference ToolCalls>
+      5. Score with asyncio.run(metric.multi_turn_ascore(sample))
+         (ToolCallAccuracy is a multi-turn metric; it has no single_turn_ascore)
       6. Return {"score": float, "reasoning": str}
-
-    - Hint: You'll need to wrap the LLM for RAGAS:
-        from ragas.llms import LangchainLLMWrapper
-        from backend.config import get_llm
-        ragas_llm = LangchainLLMWrapper(get_llm())
 
     - Alternatively, if RAGAS is not installed, fall back to a simple
       comparison of approval_path lists (partial credit approach).
@@ -189,14 +198,17 @@ def create_agent_goal_accuracy_evaluator():
       2. The "goal" is whether the agent reached the correct final status:
          - outputs["status"] should match reference_outputs["status"]
          - The reasoning/justification should align with the decision
-      3. Construct the appropriate RAGAS sample with:
-         - user_input: description of the financial request from inputs
-         - response: the agent's final status and reasoning from outputs
-         - reference: the expected status from reference_outputs
-      4. Score using the RAGAS metric
+      3. Construct a MultiTurnSample with:
+         - user_input: a list of ragas messages, e.g.
+             [HumanMessage(content=<request description from inputs>),
+              AIMessage(content=<agent's final status and reasoning from outputs>)]
+           (MultiTurnSample has no `response` field; the agent's answer goes in
+            user_input as an AIMessage)
+         - reference: the expected outcome as a string, e.g. "Request is approved"
+      4. Score with asyncio.run(metric.multi_turn_ascore(sample))
       5. Return {"score": float, "reasoning": str}
 
-    - Hint: This metric uses an LLM judge, so you need:
+    - Hint: This metric uses an LLM judge. Create it inside the evaluator:
         from ragas.llms import LangchainLLMWrapper
         metric = AgentGoalAccuracyWithReference(llm=LangchainLLMWrapper(get_llm()))
 
@@ -210,25 +222,28 @@ def create_agent_goal_accuracy_evaluator():
 
 def create_topic_adherence_evaluator():
     """
-    Create an evaluator using RAGAS TopicAdherence.
+    Create an evaluator using RAGAS TopicAdherenceScore.
 
     TODO (3 points):
     - Return a callable with signature:
         def evaluator(inputs, outputs, reference_outputs) -> dict
 
     - Steps to implement:
-      1. Import ragas.metrics.TopicAdherence
+      1. Import ragas.metrics.TopicAdherenceScore
       2. Define the expected topic/domain: "financial approval workflow"
       3. Check that the agent's outputs stay within the financial approval domain
          and don't go off-topic (e.g., no unrelated advice, no non-financial content)
-      4. Construct a RAGAS sample with the agent's response text
-      5. Score using TopicAdherence metric
+      4. Construct a MultiTurnSample with user_input=[HumanMessage(...), AIMessage(<agent text>)]
+         and reference_topics=[...]
+      5. Score with asyncio.run(metric.multi_turn_ascore(sample))
       6. Return {"score": float, "reasoning": str}
 
-    - Hint: TopicAdherence requires reference_topics parameter:
-        metric = TopicAdherence(
-            llm=LangchainLLMWrapper(get_llm()),
-            reference_topics=["financial approval", "budget review", "risk assessment"]
+    - Hint: reference_topics belongs to the sample, not the metric. Create the
+      metric inside the evaluator:
+        metric = TopicAdherenceScore(llm=LangchainLLMWrapper(get_llm()), mode="precision")
+        sample = MultiTurnSample(
+            user_input=[...],
+            reference_topics=["financial approval", "budget review", "risk assessment"],
         )
 
     Returns:
@@ -283,7 +298,9 @@ def create_hallucination_evaluator():
         1. Import ragas.metrics.Faithfulness
         2. Check if the agent's reasoning/decisions are grounded in the
            actual input data (amount, department, description, justification)
-        3. Score using the Faithfulness metric
+        3. Faithfulness is single-turn: build SingleTurnSample(user_input=...,
+           response=<agent text>, retrieved_contexts=[<input fields as text>])
+           and score with asyncio.run(metric.single_turn_ascore(sample))
 
       Option B — Direct LLM judge:
         1. Use get_llm() to create an LLM

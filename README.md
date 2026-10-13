@@ -409,7 +409,9 @@ RAGAS framework metrics for industry-standard agent evaluation:
 |-----------|--------|--------------|
 | `create_tool_call_accuracy_evaluator` | 5 | `ToolCallAccuracy` — validates correct workflow stages invoked in correct order |
 | `create_agent_goal_accuracy_evaluator` | 4 | `AgentGoalAccuracyWithReference` — did agent reach correct final status? |
-| `create_topic_adherence_evaluator` | 3 | `TopicAdherence` — agent stays within financial approval domain |
+| `create_topic_adherence_evaluator` | 3 | `TopicAdherenceScore` — agent stays within financial approval domain |
+
+All three are multi-turn RAGAS metrics (`ragas==0.4.3`, imported from `ragas.metrics`): build a `MultiTurnSample` and score it with `multi_turn_ascore()`. They have no `single_turn_ascore()`, and there is no `ragas.metrics.TopicAdherence`. Create LLM-backed metrics inside the evaluator, not in the factory: the tests call every factory, and `get_llm()` raises without an `OPENAI_API_KEY`.
 
 ### Layer 3 — Safety & Compliance (12 points)
 Mixed RAGAS + heuristic evaluators for safety:

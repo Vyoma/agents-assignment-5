@@ -64,7 +64,7 @@
 ### Part 5: Three-Layer Evaluation Framework (50 pts)
 - `backend/evaluation/three_layer_evaluators.py`: 10 evaluator factories across 3 layers (34 pts)
   - Layer 1 — Business Metrics (10 pts): approval_path, false_positive, false_negative, human_review_efficiency
-  - Layer 2 — Agent Performance (12 pts): RAGAS ToolCallAccuracy, AgentGoalAccuracy, TopicAdherence
+  - Layer 2 — Agent Performance (12 pts): RAGAS ToolCallAccuracy, AgentGoalAccuracyWithReference, TopicAdherenceScore (multi_turn_ascore)
   - Layer 3 — Safety & Compliance (12 pts): policy_adherence, hallucination, audit_trail
 - `backend/evaluation/dataset_generator.py`: LLM dataset generation + LangSmith upload (16 pts)
 
@@ -92,7 +92,7 @@ python -m backend.evaluation.run_three_layer_eval  # Part 5 three-layer eval
 - **SqliteSaver**: Checkpoints graph state for interrupt/resume
 - **useLangGraphInterrupt**: React hook that fires on graph interrupts
 - **resolve()**: Sends decision from frontend back to graph
-- **RAGAS metrics**: ToolCallAccuracy, AgentGoalAccuracyWithReference, TopicAdherence for agent evaluation
+- **RAGAS metrics** (ragas==0.4.3, from ragas.metrics): ToolCallAccuracy, AgentGoalAccuracyWithReference, TopicAdherenceScore; score with `multi_turn_ascore(MultiTurnSample(...))`. There is no `ragas.metrics.TopicAdherence`, and these metrics have no `single_turn_ascore`. Faithfulness is single-turn (`SingleTurnSample`, `single_turn_ascore`).
 - **LangchainLLMWrapper**: Wraps get_llm() for RAGAS metric compatibility
 - **convert_to_ragas_messages**: Converts LangGraph traces to RAGAS format
 
