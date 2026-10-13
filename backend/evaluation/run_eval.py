@@ -21,7 +21,9 @@ def run_evaluation():
     This function:
     1. Sets up LangSmith tracing
     2. Creates evaluator instances
-    3. Runs each test case through the approval workflow
+    3. Scores each test case's expected values against themselves (the
+       workflow is NOT run here), which checks your evaluator logic only:
+       a correct evaluator prints 1.00 averages by construction
     4. Collects and reports scores
     """
     if not LANGSMITH_API_KEY:

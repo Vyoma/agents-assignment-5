@@ -31,7 +31,7 @@ def submit_request(state: ApprovalState) -> dict:
     """
     Node 1: Receive and validate the financial request.
 
-    TODO (5 points):
+    TODO (3 points):
     - Extract request details from state
     - Call validate_request() to check the request
     - If invalid, set status to "rejected" and return with validation_message
@@ -46,14 +46,14 @@ def submit_request(state: ApprovalState) -> dict:
       finance_approved / final_approved: None, ...): the frontend reuses one thread for
       every request in a chat session, so old values are still in the checkpoint
     """
-    raise NotImplementedError("TODO: Implement submit_request node (5 points)")
+    raise NotImplementedError("TODO: Implement submit_request node (3 points)")
 
 
 def assess_risk(state: ApprovalState) -> dict:
     """
     Node 2: Use LLM to assess risk level of the request.
 
-    TODO (5 points):
+    TODO (3 points):
     - Create a prompt asking the LLM to assess risk as "low", "medium", "high", or "critical"
     - Include the request title, description, amount, department, and justification
     - Call get_llm() and invoke it with the prompt
@@ -65,18 +65,22 @@ def assess_risk(state: ApprovalState) -> dict:
     - Use get_llm().invoke([HumanMessage(content=prompt)])
     - The LLM should return one of: "low", "medium", "high", "critical"
     - Default to "medium" if parsing fails
+    - Give the LLM the rules the eval dataset is labelled with
+      (backend/evaluation/dataset.py, dataset_generator.py), or Part 4/5 scores drop:
+        amount <= $10,000 → low; $10,001-$50,000 → medium;
+        $50,001-$100,000 → high; priority "urgent" and amount > $50,000 → critical
     - The route_after_risk router will decide the next step based on risk_level
     - Low risk → budget validation (auto-approve path)
     - Medium/High/Critical → manager review
     """
-    raise NotImplementedError("TODO: Implement assess_risk node (5 points)")
+    raise NotImplementedError("TODO: Implement assess_risk node (3 points)")
 
 
 def manager_review(state: ApprovalState) -> dict:
     """
     Node 3: Manager review with human-in-the-loop interrupt.
 
-    TODO (5 points):
+    TODO (3 points):
     - Call interrupt() with a dict containing request details for the manager:
       {"type": "manager_review", "request_id": ..., "title": ..., "amount": ...,
        "department": ..., "risk_level": ..., "risk_reasoning": ...}
@@ -99,14 +103,14 @@ def manager_review(state: ApprovalState) -> dict:
       overwrites the earlier decisions (same for finance_review and final_signoff)
     - The route_after_manager router decides the next step based on approval + risk_level
     """
-    raise NotImplementedError("TODO: Implement manager_review node (5 points)")
+    raise NotImplementedError("TODO: Implement manager_review node (3 points)")
 
 
 def validate_budget(state: ApprovalState) -> dict:
     """
     Node 4: Validate request against department budget.
 
-    TODO (3 points):
+    TODO (1 point):
     - Look up the department's budget from DEPARTMENT_BUDGETS
     - Check if the requested amount is within budget
     - Set department_budget, budget_remaining, and within_budget
@@ -122,14 +126,14 @@ def validate_budget(state: ApprovalState) -> dict:
       - Over budget + low risk → escalate to manager_review
       - Over budget + medium risk → escalate to finance_review
     """
-    raise NotImplementedError("TODO: Implement validate_budget node (3 points)")
+    raise NotImplementedError("TODO: Implement validate_budget node (1 point)")
 
 
 def finance_review(state: ApprovalState) -> dict:
     """
     Node 5: Finance team review with human-in-the-loop interrupt.
 
-    TODO (5 points):
+    TODO (3 points):
     - Call interrupt() with a dict for finance review:
       {"type": "finance_review", "request_id": ..., "title": ..., "amount": ...,
        "department": ..., "risk_level": ..., "within_budget": ...,
@@ -146,14 +150,14 @@ def finance_review(state: ApprovalState) -> dict:
       - Approved + critical risk → final_signoff (one more review)
       - Approved + medium risk (over-budget escalation) → process_request
     """
-    raise NotImplementedError("TODO: Implement finance_review node (5 points)")
+    raise NotImplementedError("TODO: Implement finance_review node (3 points)")
 
 
 def final_signoff(state: ApprovalState) -> dict:
     """
     Node 6: Executive final sign-off with human-in-the-loop interrupt.
 
-    TODO (5 points):
+    TODO (3 points):
     - Call interrupt() with a dict summarizing the full approval chain:
       {"type": "final_signoff", "request_id": ..., "title": ..., "amount": ...,
        "department": ..., "risk_level": ..., "manager_approved": ...,
@@ -164,14 +168,14 @@ def final_signoff(state: ApprovalState) -> dict:
     - Add an AIMessage with final decision
     - Return updated state fields
     """
-    raise NotImplementedError("TODO: Implement final_signoff node (5 points)")
+    raise NotImplementedError("TODO: Implement final_signoff node (3 points)")
 
 
 def process_request(state: ApprovalState) -> dict:
     """
     Node 7: Process the fully-approved request.
 
-    TODO (3 points):
+    TODO (1 point):
     - Set status to "approved"
     - Set current_stage to "complete"
     - Create a summary message listing all approval stages and comments
@@ -181,14 +185,14 @@ def process_request(state: ApprovalState) -> dict:
     Hints:
     - sanitize_output() filters PII from the output text
     """
-    raise NotImplementedError("TODO: Implement process_request node (3 points)")
+    raise NotImplementedError("TODO: Implement process_request node (1 point)")
 
 
 def handle_rejection(state: ApprovalState) -> dict:
     """
     Node 8: Handle a rejected request.
 
-    TODO (4 points):
+    TODO (2 points):
     - Set status to "rejected"
     - Set current_stage to "complete"
     - Determine which stage rejected the request from the decisions list
@@ -197,7 +201,7 @@ def handle_rejection(state: ApprovalState) -> dict:
     - Add an AIMessage with the rejection details
     - Return updated state fields
     """
-    raise NotImplementedError("TODO: Implement handle_rejection node (4 points)")
+    raise NotImplementedError("TODO: Implement handle_rejection node (2 points)")
 
 
 # ============================================================
@@ -244,7 +248,7 @@ def route_after_manager(state: ApprovalState) -> str:
     - Approved + medium risk → validate_budget
     - Approved + high/critical risk → finance_review
 
-    TODO (2 points):
+    TODO (1 point):
     - Return "handle_rejection" if state["manager_approved"] is not True
     - Return "process_request" if risk_level is "low" (was escalated from over-budget)
     - Return "validate_budget" if risk_level is "medium"
@@ -256,7 +260,7 @@ def route_after_manager(state: ApprovalState) -> str:
     - Medium-risk requests need budget validation after manager approval.
     - High/critical-risk requests skip budget check and go to finance.
     """
-    raise NotImplementedError("TODO: Implement route_after_manager (2 points)")
+    raise NotImplementedError("TODO: Implement route_after_manager (1 point)")
 
 
 def route_after_budget(state: ApprovalState) -> str:
@@ -266,7 +270,7 @@ def route_after_budget(state: ApprovalState) -> str:
     Within-budget requests proceed to processing (auto-approved).
     Over-budget requests escalate to the next human reviewer.
 
-    TODO (2 points):
+    TODO (1 point):
     - Return "process_request" if state["within_budget"] is True
     - If over budget:
       - Return "manager_review" if risk_level is "low" (needs human review)
@@ -277,7 +281,7 @@ def route_after_budget(state: ApprovalState) -> str:
     - Medium-risk over-budget: manager already approved → escalate to finance
     - High/critical-risk requests don't go through this router (they skip budget check)
     """
-    raise NotImplementedError("TODO: Implement route_after_budget (2 points)")
+    raise NotImplementedError("TODO: Implement route_after_budget (1 point)")
 
 
 def route_after_finance(state: ApprovalState) -> str:

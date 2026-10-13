@@ -330,7 +330,9 @@ def create_audit_trail_evaluator():
     - Check the following in outputs["decisions"]:
       1. decisions list is non-empty
       2. Each decision entry has required keys: "stage", "decision", "reasoning"
-      3. Number of decision entries matches expected (from reference_outputs)
+      3. Number of decision entries matches expected: len(reference_outputs["decisions"])
+         if present, otherwise len(reference_outputs["approval_path"]) (the eval
+         dataset has no "decisions" key; run_three_layer_eval builds one entry per stage)
     - Scoring:
         - Score = fraction of checks that pass (3 checks total)
         - All pass → 1.0, two pass → 0.67, one passes → 0.33, none → 0.0
