@@ -32,8 +32,14 @@ def run_evaluation():
     os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
     os.environ.setdefault("LANGCHAIN_PROJECT", LANGSMITH_PROJECT)
 
-    risk_evaluator = create_risk_accuracy_evaluator()
-    consistency_evaluator = create_approval_consistency_evaluator()
+    def _make(factory):
+        try:
+            return factory()
+        except NotImplementedError:
+            return None
+
+    risk_evaluator = _make(create_risk_accuracy_evaluator)
+    consistency_evaluator = _make(create_approval_consistency_evaluator)
 
     print(f"Running evaluation with {len(EVAL_DATASET)} test cases...")
     print(f"LangSmith project: {LANGSMITH_PROJECT}")
@@ -58,6 +64,9 @@ def run_evaluation():
         print(f"  Expected status: {expected['status']}")
 
         for name, evaluator, make_outputs, scores in evaluators:
+            if evaluator is None:
+                print(f"  {name} evaluator: NOT IMPLEMENTED")
+                continue
             try:
                 result = evaluator(
                     inputs=inputs,

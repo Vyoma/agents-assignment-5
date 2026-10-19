@@ -312,7 +312,7 @@ final_signoff   ─┬─ approved ──────────────→
 - Reject negative amounts and amounts exceeding budget ceiling
 - Reject invalid departments
 - Block SQL injection and XSS patterns
-- Enforce field length limits
+- Enforce the title length limit (`MAX_TITLE_LENGTH`)
 
 ### Output Filtering
 - Mask SSN patterns (XXX-XX-XXXX)
@@ -429,7 +429,7 @@ Mixed RAGAS + heuristic evaluators for safety:
 
 | Evaluator | Points | Logic |
 |-----------|--------|-------|
-| `create_policy_adherence_evaluator` | 4 | Heuristic: over-ceiling must reject, required reviews per risk level |
+| `create_policy_adherence_evaluator` | 4 | Heuristic: over-ceiling must reject, at least the required reviews per risk level (budget escalation can add more) |
 | `create_hallucination_evaluator` | 4 | RAGAS `Faithfulness` or LLM judge: no fabricated details |
 | `create_audit_trail_evaluator` | 4 | Heuristic: decisions non-empty, correct keys, correct count |
 

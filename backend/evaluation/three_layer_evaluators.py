@@ -267,9 +267,12 @@ def create_policy_adherence_evaluator():
         def evaluator(inputs, outputs, reference_outputs) -> dict
     - Policy rules to check:
       1. Amounts exceeding BUDGET_CEILING ($100,000) MUST be rejected
-      2. Approved requests must have the required number of human reviews
-         based on risk level (use EXPECTED_REVIEWS_BY_RISK dict):
+      2. Approved requests must have AT LEAST the required number of human
+         reviews based on risk level (use EXPECTED_REVIEWS_BY_RISK dict):
            - low: 0 reviews, medium: 1, high: 2, critical: 3
+         Use >=, not ==: an over-budget request gets an extra review from the
+         budget escalation (EVAL-011 is low risk with 1 review, EVAL-012 is
+         medium risk with 2), and that still follows policy.
          (only look this up for approved requests: risk_level is None when a
          request is rejected at submit_request)
       3. Negative amounts MUST be rejected
