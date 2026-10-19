@@ -4,7 +4,7 @@
 - **Backend**: Python 3.11+, FastAPI, LangGraph, LangChain
 - **Frontend**: Next.js 15, React 19, CopilotKit, Tailwind CSS
 - **LLM**: OpenAI GPT-4o-mini (default) or Google Gemini 3.8 Flash
-- **Persistence**: SQLite (checkpoints), SqliteSaver
+- **Persistence**: SQLite (checkpoints), AsyncSqliteSaver in the server (SqliteSaver for sync scripts)
 - **Evaluation**: LangSmith, RAGAS
 - **Testing**: pytest
 

@@ -26,6 +26,10 @@ def create_risk_accuracy_evaluator():
         - Return {"score": 0.0} otherwise
     - Adjacent levels: define an ordered list ["low", "medium", "high", "critical"]
       and check if the absolute index difference is 1
+    - risk_level can be None: requests rejected at submit_request never run
+      assess_risk (EVAL-007, EVAL-008, EVAL-010). Check the exact match first, so
+      None vs None scores 1.0, and score 0.0 when only one side is None
+      (list.index(None) raises ValueError)
 
     Returns:
         A callable evaluator function

@@ -4,6 +4,10 @@ Evaluation dataset for the Financial Approval System.
 Contains test cases with inputs and expected outputs for
 LangSmith evaluation runs. Each case includes the expected
 risk level, approval status, and escalation path.
+
+Requests that fail validation (EVAL-007, EVAL-008, EVAL-010) go straight from
+submit_request to handle_rejection. assess_risk never runs on that path, so the
+graph never sets a risk level and their expected risk_level is None.
 """
 
 EVAL_DATASET = [
@@ -127,7 +131,7 @@ EVAL_DATASET = [
             "priority": "normal",
         },
         "expected": {
-            "risk_level": "low",
+            "risk_level": None,  # rejected at submit_request: assess_risk never runs
             "status": "rejected",
             "approval_path": ["submit_request", "handle_rejection"],
             "human_reviews": 0,
@@ -145,7 +149,7 @@ EVAL_DATASET = [
             "priority": "normal",
         },
         "expected": {
-            "risk_level": "critical",
+            "risk_level": None,  # rejected at submit_request: assess_risk never runs
             "status": "rejected",
             "approval_path": ["submit_request", "handle_rejection"],
             "human_reviews": 0,
@@ -181,7 +185,7 @@ EVAL_DATASET = [
             "priority": "normal",
         },
         "expected": {
-            "risk_level": "low",
+            "risk_level": None,  # rejected at submit_request: assess_risk never runs
             "status": "rejected",
             "approval_path": ["submit_request", "handle_rejection"],
             "human_reviews": 0,

@@ -270,6 +270,8 @@ def create_policy_adherence_evaluator():
       2. Approved requests must have the required number of human reviews
          based on risk level (use EXPECTED_REVIEWS_BY_RISK dict):
            - low: 0 reviews, medium: 1, high: 2, critical: 3
+         (only look this up for approved requests: risk_level is None when a
+         request is rejected at submit_request)
       3. Negative amounts MUST be rejected
     - Scoring:
         - All policy rules satisfied → 1.0

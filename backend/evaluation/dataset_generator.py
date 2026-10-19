@@ -40,7 +40,8 @@ DATASET_SCHEMA = {
         "priority": "str — one of: low, normal, high, urgent",
     },
     "expected": {
-        "risk_level": "str — one of: low, medium, high, critical",
+        "risk_level": "str or None: one of low, medium, high, critical; None (JSON null) "
+                      "when the request is rejected at submit_request, because assess_risk never runs",
         "status": "str — one of: approved, rejected",
         "approval_path": "list[str] — ordered list of workflow stages",
         "human_reviews": "int — number of human review interrupts expected",
@@ -63,6 +64,8 @@ Business Rules:
   Path: submit_request → handle_rejection
 - Negative amounts: rejected (invalid)
   Path: submit_request → handle_rejection
+- Requests rejected at submit_request never reach assess_risk: their expected
+  risk_level is null
 - Priority "urgent" + amount > $50,000: critical risk, needs 3 reviews
   Path: submit_request → assess_risk → manager_review → finance_review → final_signoff → process_request
 - Department budgets: engineering $50,000, marketing $30,000, operations $40,000,
@@ -97,6 +100,8 @@ Business Rules:
 - Amounts $50,001-$100,000: high risk, manager + finance review
 - Amounts > $100,000: REJECTED (exceeds ceiling)
 - Negative amounts: REJECTED
+- Requests rejected at submit_request (path submit_request → handle_rejection) never
+  reach assess_risk: their expected risk_level is null
 - Priority "urgent" + amount > $50,000: critical risk, 3 reviews
 - Over the department budget (engineering $50,000, marketing $30,000, operations $40,000,
   research $60,000, hr $5,000): low risk adds a manager review (1 review), medium risk
@@ -209,7 +214,8 @@ def validate_generated_dataset(dataset):
          approval_path, human_reviews
       5. amount is a number (int or float)
       6. department is in VALID_DEPARTMENTS
-      7. risk_level is one of: low, medium, high, critical
+      7. risk_level is one of: low, medium, high, critical, or None when
+         approval_path skips "assess_risk" (rejected at submit_request)
       8. status is one of: approved, rejected
       9. approval_path is a list
       10. human_reviews is an int >= 0

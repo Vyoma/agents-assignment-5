@@ -285,7 +285,7 @@ final_signoff   ─┬─ approved ──────────────→
 ### Key Concepts
 - **interrupt()**: Pauses the graph and sends data to the frontend for human review
 - **Command(resume=...)**: Frontend sends the human's decision back to resume the graph
-- **SqliteSaver**: Persists graph state so interrupted workflows survive server restarts
+- **AsyncSqliteSaver**: `server.py` creates it and passes it to `create_approval_graph(checkpointer=...)`; it persists graph state so interrupted workflows survive server restarts (use the sync `SqliteSaver` from `create_checkpointer()` only in sync scripts)
 - **Conditional edges**: Route the workflow based on approval/rejection decisions
 
 ### Point Breakdown
@@ -499,11 +499,14 @@ python -m backend.evaluation.run_three_layer_eval
 
 ## Submission
 
-This assignment uses **GitHub Classroom** for submission and grading:
+This assignment uses **GitHub Classroom**. Your work is submitted by pushing to your repository's `main` branch.
 
-1. **Push your code** to the `main` branch of your GitHub Classroom repository
-2. The **autograder** will automatically run when you push
-3. A **Pull Request** will be created with your grading results
-4. Check the PR comments for your score and feedback
+1. Run the tests and both evaluation runners (see **Running Tests** and **Useful Commands** above)
+2. Commit and push your changes to `main`
+3. Go to your repository page on GitHub and confirm all files are present
 
-You can push multiple times — the autograder will re-run on each push. Your latest push before the deadline will be graded.
+### How Grading Works
+
+- Your score and feedback are posted in **Canvas** (SpeedGrader), on your Assignment 5 submission
+- The GitHub Actions workflow in this repository is not used for grades. Nothing opens a Pull Request or posts a score on GitHub, so you will not find results in the **Pull Requests** or **Actions** tabs
+- You can push multiple times before the deadline

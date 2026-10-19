@@ -42,9 +42,11 @@ def submit_request(state: ApprovalState) -> dict:
     Hints:
     - validate_request() returns (is_valid: bool, message: str)
     - Return dict with keys: is_valid, validation_message, current_stage, status, messages
-    - Also reset the previous request's review state ("decisions": [], manager_approved /
-      finance_approved / final_approved: None, ...): the frontend reuses one thread for
-      every request in a chat session, so old values are still in the checkpoint
+    - Also reset the previous request's review state ("decisions": [], risk_level /
+      manager_approved / finance_approved / final_approved: None, ...): the frontend
+      reuses one thread for every request in a chat session, so old values are still in
+      the checkpoint (a request rejected here never runs assess_risk, so without the reset
+      it would report the previous request's risk_level)
     """
     raise NotImplementedError("TODO: Implement submit_request node (3 points)")
 
