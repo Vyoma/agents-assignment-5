@@ -30,30 +30,7 @@ jobs:
           pip install -r backend/requirements.txt
           pip install pytest
 
+      # Scores go to Canvas only. This step keeps the report on the runner:
+      # no score in the log, step summary or artifacts, since those are public.
       - name: Run grader
-        id: grade
-        run: |
-          python .grader/assignment5/grader.py --output grade_report.json
-          SCORE=$(python -c "import json; r=json.load(open('grade_report.json')); print(f\"{r['total']}/{r['max_score']}\")")
-          echo "score=$SCORE" >> $GITHUB_OUTPUT
-
-      - name: Upload grade report
-        uses: actions/upload-artifact@v4
-        with:
-          name: grade-report
-          path: grade_report.json
-
-      - name: Post grade summary
-        run: |
-          echo "## Grade Report" >> $GITHUB_STEP_SUMMARY
-          echo "**Score: ${{ steps.grade.outputs.score }}**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          python -c "
-          import json
-          r = json.load(open('grade_report.json'))
-          for s in r['sections']:
-              print(f\"### {s['name']} ({s['score']:.1f}/{s['max_score']:.1f})\")
-              for d in s['details']:
-                  print(f\"- {d}\")
-              print()
-          " >> $GITHUB_STEP_SUMMARY
+        run: python .grader/assignment5/grader.py --output grade_report.json > /dev/null
