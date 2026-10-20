@@ -57,14 +57,18 @@ def assess_risk(state: ApprovalState) -> dict:
 
     TODO (3 points):
     - Create a prompt asking the LLM to assess risk as "low", "medium", "high", or "critical"
-    - Include the request title, description, amount, department, and justification
+    - Include the request title, description, amount, department, justification, and priority
+      (the "urgent" rule below needs priority)
     - Call get_llm() and invoke it with the prompt
-    - Parse the LLM response to extract risk_level and risk_reasoning
+    - Parse the LLM response text to extract risk_level and risk_reasoning
     - Add an AIMessage with the risk assessment
     - Return updated state fields
 
     Hints:
-    - Use get_llm().invoke([HumanMessage(content=prompt)])
+    - Use response = get_llm().invoke([HumanMessage(content=prompt)])
+    - Read the reply with response.text (a property: no parentheses), not response.content.
+      Gemini returns content as a list of content blocks, so re.search() or json.loads()
+      on response.content raises TypeError; .text is a plain string for OpenAI and Gemini
     - The LLM should return one of: "low", "medium", "high", "critical"
     - Default to "medium" if parsing fails
     - Give the LLM the rules the eval dataset is labelled with

@@ -48,6 +48,44 @@ DATASET_SCHEMA = {
     },
 }
 
+OUTPUT_FORMAT = """
+Output format (validate_generated_dataset rejects a case that does not follow it):
+Each test case is a JSON object with exactly two keys, "input" and "expected".
+"input" has all 8 of these fields:
+  "request_id": string, unique (e.g. "GEN-001")
+  "title": string, short name of the purchase
+  "description": string, details of the purchase
+  "amount": number, not a string (dollars)
+  "department": one of {departments}
+  "requester": string, name of the person making the request
+  "justification": string, business reason for the purchase
+  "priority": one of "low", "normal", "high", "urgent"
+"expected" has all 4 of these fields:
+  "risk_level": one of "low", "medium", "high", "critical", or null when the request is
+    rejected at submit_request (its approval_path has no "assess_risk")
+  "status": "approved" or "rejected" (lowercase)
+  "approval_path": list of stage names in order, taken from: "submit_request",
+    "assess_risk", "validate_budget", "manager_review", "finance_review",
+    "final_signoff", "process_request", "handle_rejection"
+  "human_reviews": integer >= 0, the number of "manager_review", "finance_review" and
+    "final_signoff" stages in approval_path
+Use these key names exactly ("approval_path", not "path"; "human_reviews", not
+"review_count" or "required_reviews"). risk_level, status and priority are lowercase.
+Expected values assume every human reviewer approves, so "rejected" is only for
+requests rejected at submit_request.
+
+Example of one test case:
+{{"input": {{"request_id": "GEN-001", "title": "Team Laptops",
+  "description": "Three laptops for new hires", "amount": 4500.0,
+  "department": "engineering", "requester": "Dana Lee",
+  "justification": "New hires start next month", "priority": "normal"}},
+ "expected": {{"risk_level": "low", "status": "approved",
+  "approval_path": ["submit_request", "assess_risk", "validate_budget", "process_request"],
+  "human_reviews": 0}}}}
+
+Return ONLY a JSON array of test case objects. No markdown, no explanation.
+"""
+
 GENERATION_PROMPT = """You are a test case generator for a Financial Approval System.
 
 Generate {num_cases} diverse test cases for evaluating the system. Each test case
@@ -62,7 +100,7 @@ Business Rules:
   Path: submit_request → assess_risk → manager_review → finance_review → process_request
 - Amounts > $100,000: rejected (exceeds budget ceiling)
   Path: submit_request → handle_rejection
-- Negative amounts: rejected (invalid)
+- Zero or negative amounts: rejected (invalid)
   Path: submit_request → handle_rejection
 - Requests rejected at submit_request never reach assess_risk: their expected
   risk_level is null
@@ -80,9 +118,7 @@ Valid priorities: low, normal, high, urgent
 
 Generate realistic financial requests covering different departments, amounts,
 and risk levels. Include a mix of approved and rejected cases.
-
-Return ONLY a JSON array of test case objects. No markdown, no explanation.
-"""
+""" + OUTPUT_FORMAT
 
 EDGE_CASE_PROMPT = """You are a test case generator for a Financial Approval System.
 Generate {num_cases} EDGE CASES and ADVERSARIAL scenarios.
@@ -95,22 +131,26 @@ Focus on boundary conditions and tricky scenarios:
 5. Requests that test policy boundaries
 
 Business Rules:
-- Amounts <= $10,000: low risk, auto-approved
-- Amounts $10,001-$50,000: medium risk, manager review
-- Amounts $50,001-$100,000: high risk, manager + finance review
-- Amounts > $100,000: REJECTED (exceeds ceiling)
-- Negative amounts: REJECTED
-- Requests rejected at submit_request (path submit_request → handle_rejection) never
-  reach assess_risk: their expected risk_level is null
-- Priority "urgent" + amount > $50,000: critical risk, 3 reviews
+- Amounts <= $10,000: low risk, auto-approved (0 human reviews)
+  Path: submit_request → assess_risk → validate_budget → process_request
+- Amounts $10,001-$50,000: medium risk, manager review (1 human review)
+  Path: submit_request → assess_risk → manager_review → validate_budget → process_request
+- Amounts $50,001-$100,000: high risk, manager + finance review (2 human reviews)
+  Path: submit_request → assess_risk → manager_review → finance_review → process_request
+- Priority "urgent" + amount > $50,000: critical risk, 3 reviews (no budget check)
+  Path: submit_request → assess_risk → manager_review → finance_review → final_signoff → process_request
+- Rejected at submit_request: amounts > $100,000, zero or negative amounts, and text
+  containing SQL or script injection (for example "<script>" or "' or '1'='1")
+  Path: submit_request → handle_rejection. These never reach assess_risk: their
+  expected risk_level is null and human_reviews is 0
 - Over the department budget (engineering $50,000, marketing $30,000, operations $40,000,
-  research $60,000, hr $5,000): low risk adds a manager review (1 review), medium risk
-  adds a finance review after the budget check (2 reviews)
+  research $60,000, hr $5,000), only for low and medium risk:
+  - Low risk: submit_request → assess_risk → validate_budget → manager_review → process_request (1 review)
+  - Medium risk: submit_request → assess_risk → manager_review → validate_budget → finance_review → process_request (2 reviews)
 
 Valid departments: {departments}
-
-Return ONLY a JSON array of test case objects. No markdown, no explanation.
-"""
+Use only these departments: an invalid department fails validate_generated_dataset.
+""" + OUTPUT_FORMAT
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -124,8 +164,11 @@ def generate_eval_dataset(num_cases=10, llm=None):
     TODO (4 points):
     - If llm is None, create one using: from backend.config import get_llm
     - Format GENERATION_PROMPT with num_cases and VALID_DEPARTMENTS
-    - Invoke the LLM with the formatted prompt
-    - Parse the JSON response into a list of dicts
+    - Invoke the LLM with the formatted prompt: response = llm.invoke(prompt)
+    - Parse the JSON response into a list of dicts: json.loads(response.text)
+      (.text is a property, no parentheses; response.content is a list of content
+      blocks with Gemini, and json.loads() on it raises TypeError. If the model wraps
+      the array in a ```json fence anyway, strip the fence before json.loads)
     - Each dict must match DATASET_SCHEMA structure
     - Return the list of generated test cases
 
@@ -152,8 +195,11 @@ def generate_edge_cases(num_cases=5, llm=None):
     TODO (4 points):
     - If llm is None, create one using: from backend.config import get_llm
     - Format EDGE_CASE_PROMPT with num_cases and VALID_DEPARTMENTS
-    - Invoke the LLM with the formatted prompt
-    - Parse the JSON response into a list of dicts
+    - Invoke the LLM with the formatted prompt: response = llm.invoke(prompt)
+    - Parse the JSON response into a list of dicts: json.loads(response.text)
+      (.text is a property, no parentheses; response.content is a list of content
+      blocks with Gemini, and json.loads() on it raises TypeError. If the model wraps
+      the array in a ```json fence anyway, strip the fence before json.loads)
     - Focus on boundary conditions (exact thresholds, negatives, etc.)
     - Return the list of generated edge cases
 

@@ -372,19 +372,46 @@ def check_audit_trail_complete():
         from backend.evaluation.three_layer_evaluators import create_audit_trail_evaluator
         evaluator = create_audit_trail_evaluator()
         decisions = [
-            {"stage": "risk_assessment", "decision": "medium", "reasoning": "Amount in medium range"},
             {"stage": "manager_review", "decision": "approved", "reasoning": "Justified expense"},
+            {"stage": "finance_review", "decision": "approved", "reasoning": "Within annual plan"},
         ]
         result = evaluator(
-            inputs={"amount": 15000, "department": "engineering"},
+            inputs={"amount": 75000, "department": "research"},
             outputs={"decisions": decisions},
-            reference_outputs={"decisions": decisions},
+            reference_outputs={"approval_path": ["submit_request", "assess_risk", "manager_review",
+                                                 "finance_review", "process_request"]},
         )
         if result.get("score") == 1.0:
             print("[PASS] Audit trail evaluator returns 1.0 for complete trail")
             return True
         else:
             print(f"[FAIL] Audit trail evaluator returned {result.get('score')} instead of 1.0")
+            return False
+    except NotImplementedError:
+        print("[EXPECTED] Audit trail evaluator not implemented (student TODO)")
+        return True
+    except Exception as e:
+        print(f"[FAIL] Unexpected error: {e}")
+        return False
+
+
+def check_audit_trail_no_reviews():
+    """Verify audit trail evaluator returns 1.0 for an auto-approved request with no decisions."""
+    try:
+        from backend.evaluation.three_layer_evaluators import create_audit_trail_evaluator
+        evaluator = create_audit_trail_evaluator()
+        result = evaluator(
+            inputs={"amount": 500, "department": "operations"},
+            outputs={"decisions": []},
+            reference_outputs={"approval_path": ["submit_request", "assess_risk",
+                                                 "validate_budget", "process_request"]},
+        )
+        if result.get("score") == 1.0:
+            print("[PASS] Audit trail evaluator returns 1.0 when no human review was expected")
+            return True
+        else:
+            print(f"[FAIL] Audit trail evaluator returned {result.get('score')} for an auto-approved "
+                  "request with no decisions (expected 1.0: only human reviews record decisions)")
             return False
     except NotImplementedError:
         print("[EXPECTED] Audit trail evaluator not implemented (student TODO)")
@@ -402,9 +429,8 @@ def check_audit_trail_empty():
         result = evaluator(
             inputs={"amount": 15000, "department": "engineering"},
             outputs={"decisions": []},
-            reference_outputs={"decisions": [
-                {"stage": "risk_assessment", "decision": "medium", "reasoning": "test"},
-            ]},
+            reference_outputs={"approval_path": ["submit_request", "assess_risk", "manager_review",
+                                                 "validate_budget", "process_request"]},
         )
         score = result.get("score", 1.0)
         if score < 1.0:
@@ -688,6 +714,7 @@ def run_all_checks():
     print("\n--- Layer 3: Safety & Compliance Behavior ---")
     all_results.append(check_audit_trail_complete())
     all_results.append(check_audit_trail_empty())
+    all_results.append(check_audit_trail_no_reviews())
     all_results.append(check_policy_adherence_over_ceiling())
 
     print("\n--- Dataset Generator ---")
@@ -772,6 +799,9 @@ def test_audit_trail_complete():
 
 def test_audit_trail_empty():
     assert check_audit_trail_empty()
+
+def test_audit_trail_no_reviews():
+    assert check_audit_trail_no_reviews()
 
 def test_policy_adherence_over_ceiling():
     assert check_policy_adherence_over_ceiling()

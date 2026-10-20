@@ -20,6 +20,10 @@ Part 5: Three-Layer Evaluation Framework (34 points)
 # metrics: score them with `await metric.multi_turn_ascore(MultiTurnSample(...))`.
 # Importing from ragas.metrics prints a DeprecationWarning; ignore it. The
 # ragas.metrics.collections versions do not accept LangchainLLMWrapper.
+# LangchainLLMWrapper(get_llm()) also warns "LangchainLLMWrapper is deprecated
+# ... Use llm_factory instead". That warning is expected: keep the wrapper. It
+# wraps whatever get_llm() returns (tested with Gemini), while llm_factory needs
+# a raw provider client instead of get_llm().
 # ---------------------------------------------------------------------------
 # from ragas.metrics import ToolCallAccuracy, AgentGoalAccuracyWithReference, TopicAdherenceScore
 # from ragas.metrics import Faithfulness  # Layer 3 hallucination detection
@@ -30,7 +34,8 @@ Part 5: Three-Layer Evaluation Framework (34 points)
 #
 # Build any metric that needs an LLM (get_llm()) INSIDE the returned evaluator,
 # not in the factory: the tests call every factory, and get_llm() raises
-# "Missing credentials" when OPENAI_API_KEY is not set (a fresh clone, or CI).
+# "Missing credentials" when OPENAI_API_KEY is not set at all (a fresh clone
+# without .env, or CI).
 
 # ---------------------------------------------------------------------------
 # Helper constants
@@ -45,6 +50,24 @@ EXPECTED_REVIEWS_BY_RISK = {
 }
 
 BUDGET_CEILING = 100_000
+
+# Human review stages: the only nodes that append to state["decisions"]
+HUMAN_REVIEW_STAGES = ["manager_review", "finance_review", "final_signoff"]
+
+# Allowed topics for TopicAdherenceScore. The metric extracts the topics of the
+# Human message (the request) and checks each one against this list, so it has
+# to cover what a request is about (a purchase such as "Team Lunch"), not only
+# the workflow.
+REFERENCE_TOPICS = [
+    "financial approval request",
+    "purchase or business expense of any kind (for example supplies, equipment, "
+    "software, servers, events, meals, marketing, travel)",
+    "business justification for a purchase",
+    "department budget",
+    "risk assessment",
+    "request validation",
+    "approval or rejection decision",
+]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -230,11 +253,18 @@ def create_topic_adherence_evaluator():
 
     - Steps to implement:
       1. Import ragas.metrics.TopicAdherenceScore
-      2. Define the expected topic/domain: "financial approval workflow"
-      3. Check that the agent's outputs stay within the financial approval domain
-         and don't go off-topic (e.g., no unrelated advice, no non-financial content)
-      4. Construct a MultiTurnSample with user_input=[HumanMessage(...), AIMessage(<agent text>)]
-         and reference_topics=[...]
+      2. The allowed topics are REFERENCE_TOPICS (given above)
+      3. The metric extracts the topics of the Human message, asks the judge whether
+         the AI answered each one, and in "precision" mode scores the share of
+         answered topics that fall inside REFERENCE_TOPICS. An agent that answers an
+         off-topic message (a recipe request, say) scores low. It does not grade
+         extra text the AI adds on its own.
+      4. Construct a MultiTurnSample with
+         user_input=[HumanMessage(<request summary>), AIMessage(<agent text>)]
+         and reference_topics=REFERENCE_TOPICS. Build the request summary from
+         title, description, amount, department, priority and justification, and
+         leave out request_id: the judge extracts "Request EVAL-004" as a topic
+         and marks it off-topic.
       5. Score with asyncio.run(metric.multi_turn_ascore(sample))
       6. Return {"score": float, "reasoning": str}
 
@@ -243,7 +273,7 @@ def create_topic_adherence_evaluator():
         metric = TopicAdherenceScore(llm=LangchainLLMWrapper(get_llm()), mode="precision")
         sample = MultiTurnSample(
             user_input=[...],
-            reference_topics=["financial approval", "budget review", "risk assessment"],
+            reference_topics=REFERENCE_TOPICS,
         )
 
     Returns:
@@ -301,18 +331,32 @@ def create_hallucination_evaluator():
 
       Option A — RAGAS Faithfulness:
         1. Import ragas.metrics.Faithfulness
-        2. Check if the agent's reasoning/decisions are grounded in the
-           actual input data (amount, department, description, justification)
-        3. Faithfulness is single-turn: build SingleTurnSample(user_input=...,
-           response=<agent text>, retrieved_contexts=[<input fields as text>])
-           and score with asyncio.run(metric.single_turn_ascore(sample))
+        2. Check if the agent's text (status, risk level, stages, decision
+           reasoning) is grounded in the request and in what the workflow recorded
+        3. Faithfulness is single-turn: build
+             SingleTurnSample(
+                 user_input=<request summary>,
+                 response=<agent text>,
+                 retrieved_contexts=[
+                     <input fields as text>,
+                     <workflow record as text: status, risk_level, approval_path,
+                      human_reviews, and each decision's stage and decision>,
+                 ],
+             )
+           and score with asyncio.run(metric.single_turn_ascore(sample)).
+           The judge marks every statement it cannot find in retrieved_contexts as
+           unsupported. With the input fields alone, true statements about the
+           result ("Final status: approved") count as hallucinations and a correct
+           solution scores near 0. Leave the free-text reasoning out of the record,
+           so made-up reasons in the agent text still count against it.
 
       Option B — Direct LLM judge:
         1. Use get_llm() to create an LLM
         2. Prompt it to check if outputs contain any fabricated details
            not present in the inputs (e.g., invented policy numbers,
            made-up approval histories, fabricated budget figures)
-        3. Parse the LLM response into a score
+        3. Parse the LLM response text into a score (response.text, not
+           response.content: Gemini returns content as a list of content blocks)
 
     - Return {"score": float, "reasoning": str}
       Score 1.0 = no hallucinations detected, 0.0 = hallucinations found
@@ -332,12 +376,17 @@ def create_audit_trail_evaluator():
     TODO (4 points):
     - Return a callable with signature:
         def evaluator(inputs, outputs, reference_outputs) -> dict
+    - Only the human review nodes (manager_review, finance_review, final_signoff)
+      append to state["decisions"] (see the manager_review hints in nodes.py), so
+      count human review stages only. Expected count = len(reference_outputs["decisions"])
+      if present, otherwise the number of HUMAN_REVIEW_STAGES in
+      reference_outputs["approval_path"] (the eval dataset has no "decisions" key;
+      run_three_layer_eval builds one entry per human review stage)
     - Check the following in outputs["decisions"]:
-      1. decisions list is non-empty
+      1. decisions is non-empty when the expected count is above 0 (an empty list is
+         correct when it is 0: auto-approved, or rejected at submit_request)
       2. Each decision entry has required keys: "stage", "decision", "reasoning"
-      3. Number of decision entries matches expected: len(reference_outputs["decisions"])
-         if present, otherwise len(reference_outputs["approval_path"]) (the eval
-         dataset has no "decisions" key; run_three_layer_eval builds one entry per stage)
+      3. Number of decision entries equals the expected count
     - Scoring:
         - Score = fraction of checks that pass (3 checks total)
         - All pass → 1.0, two pass → 0.67, one passes → 0.33, none → 0.0
@@ -346,11 +395,14 @@ def create_audit_trail_evaluator():
     Example:
         outputs = {
             "decisions": [
-                {"stage": "risk_assessment", "decision": "medium", "reasoning": "..."},
                 {"stage": "manager_review", "decision": "approved", "reasoning": "..."},
+                {"stage": "finance_review", "decision": "approved", "reasoning": "..."},
             ]
         }
-        → Check non-empty (pass), keys present (pass), count matches (check reference)
+        reference_outputs = {"approval_path": ["submit_request", "assess_risk",
+            "manager_review", "finance_review", "process_request"]}
+        → expected count 2: non-empty (pass), keys present (pass), count matches (pass) → 1.0
+        An auto-approved request (no review stage in the path) with decisions [] → 1.0
 
     Returns:
         A callable evaluator function

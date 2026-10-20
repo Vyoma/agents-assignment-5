@@ -159,6 +159,8 @@ cp .env.example .env
 # Edit .env with your API keys
 ```
 
+In `.env`, set the key for the provider you use. OpenAI (the default): set `OPENAI_API_KEY`. Gemini: set `LLM_PROVIDER=google` and `GOOGLE_API_KEY` (and `GOOGLE_MODEL` if you want a different model); without `LLM_PROVIDER=google`, `get_llm()` still uses OpenAI and your Gemini key is ignored. Read LLM replies with `response.text`, not `response.content`: Gemini returns `content` as a list of content blocks, and `.text` is a plain string for both providers.
+
 ### 2. Frontend
 
 ```bash
@@ -395,7 +397,7 @@ The frontend needs the backend running (`python -m backend.server`) to function.
 python -m backend.evaluation.run_eval
 ```
 
-`run_eval` (and `run_three_layer_eval`) score the dataset's expected values against themselves; they do not run your graph. They check your evaluator logic, so correct evaluators print 1.00. That number is not a measure of your agent.
+`run_eval` (and `run_three_layer_eval`) score the dataset's expected values against themselves; they do not run your graph. They check your evaluator logic, not your agent. With correct evaluators, `run_eval` prints 1.00 for both averages. In `run_three_layer_eval`, the heuristic evaluators and `tool_call_accuracy` print 1.00, while the three LLM-judged ones (`agent_goal_accuracy`, `topic_adherence`, `hallucination`) depend on the judge model and change a little from run to run. Measured once with `gemini-3.8-flash` on the 12 cases, following the docstring hints: agent_goal_accuracy 1.00, hallucination 1.00, topic_adherence 0.97 (one case at 0.67; single cases ranged from 0.33 to 1.00 over repeated runs), overall 1.00. A score far below that usually means a sample is built differently from the hints: for example, Faithfulness with only the input fields as context scored 0.01.
 
 ## Part 5: Three-Layer Evaluation Framework (50 points)
 
@@ -422,7 +424,7 @@ RAGAS framework metrics for industry-standard agent evaluation:
 | `create_agent_goal_accuracy_evaluator` | 4 | `AgentGoalAccuracyWithReference` — did agent reach correct final status? |
 | `create_topic_adherence_evaluator` | 3 | `TopicAdherenceScore` — agent stays within financial approval domain |
 
-All three are multi-turn RAGAS metrics (`ragas==0.4.3`, imported from `ragas.metrics`): build a `MultiTurnSample` and score it with `multi_turn_ascore()`. They have no `single_turn_ascore()`, and there is no `ragas.metrics.TopicAdherence`. Create LLM-backed metrics inside the evaluator, not in the factory: the tests call every factory, and `get_llm()` raises without an `OPENAI_API_KEY`.
+All three are multi-turn RAGAS metrics (`ragas==0.4.3`, imported from `ragas.metrics`): build a `MultiTurnSample` and score it with `multi_turn_ascore()`. They have no `single_turn_ascore()`, and there is no `ragas.metrics.TopicAdherence`. Create LLM-backed metrics inside the evaluator, not in the factory: the tests call every factory, and `get_llm()` raises `Missing credentials` when `OPENAI_API_KEY` is not set at all (a clone without `.env`, or CI). With the placeholder key that `cp .env.example .env` leaves in place, `get_llm()` succeeds and the first LLM call fails with a 401 authentication error. Wrapping the LLM with `LangchainLLMWrapper(get_llm())` prints `LangchainLLMWrapper is deprecated ... Use llm_factory instead`: that warning is expected, keep the wrapper: it wraps whatever `get_llm()` returns (tested with Gemini), while `llm_factory` needs a raw provider client.
 
 ### Layer 3 — Safety & Compliance (12 points)
 Mixed RAGAS + heuristic evaluators for safety:
@@ -430,8 +432,8 @@ Mixed RAGAS + heuristic evaluators for safety:
 | Evaluator | Points | Logic |
 |-----------|--------|-------|
 | `create_policy_adherence_evaluator` | 4 | Heuristic: over-ceiling must reject, at least the required reviews per risk level (budget escalation can add more) |
-| `create_hallucination_evaluator` | 4 | RAGAS `Faithfulness` or LLM judge: no fabricated details |
-| `create_audit_trail_evaluator` | 4 | Heuristic: decisions non-empty, correct keys, correct count |
+| `create_hallucination_evaluator` | 4 | RAGAS `Faithfulness` or LLM judge: no fabricated details (context = request fields plus the workflow record) |
+| `create_audit_trail_evaluator` | 4 | Heuristic: one decision per human review stage (manager, finance, final sign-off) with the right keys; an empty list is correct when no review ran |
 
 ### Dataset Generator (16 points)
 
@@ -446,6 +448,8 @@ Mixed RAGAS + heuristic evaluators for safety:
 ```bash
 python -m backend.evaluation.run_three_layer_eval
 ```
+
+The three LLM-judged evaluators make about 9 LLM calls per test case with the RAGAS options in the hints (2 for agent goal accuracy, 2 for Faithfulness, 2 plus one per extracted topic for topic adherence): a full run over the 12 cases took 103 calls with `gemini-3.8-flash`. Budget for that, and while you debug, run on a slice such as `run_three_layer_evaluation(EVAL_DATASET[:2])`.
 
 ## Bonus Features (+25 points)
 

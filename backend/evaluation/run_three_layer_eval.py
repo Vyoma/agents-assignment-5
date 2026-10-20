@@ -13,6 +13,12 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
+from dotenv import load_dotenv
+
+# Load .env before any RAGAS metric runs: RAGAS reads RAGAS_DO_NOT_TRACK once,
+# on its first analytics event, and some metrics run before get_llm() loads .env.
+load_dotenv()
+
 from backend.evaluation.dataset import EVAL_DATASET
 from backend.evaluation.three_layer_evaluators import (
     create_approval_path_evaluator,
@@ -25,6 +31,7 @@ from backend.evaluation.three_layer_evaluators import (
     create_policy_adherence_evaluator,
     create_hallucination_evaluator,
     create_audit_trail_evaluator,
+    HUMAN_REVIEW_STAGES,
 )
 
 
@@ -52,6 +59,20 @@ LAYER_NAMES = {
     2: "Agent Performance",
     3: "Safety & Compliance",
 }
+
+
+def _review_decisions(expected):
+    """One decision per human review stage in the expected path, like the review
+    nodes record them. If the request is rejected after a review, the last review
+    is the rejecting one."""
+    reviews = [s for s in expected.get("approval_path", []) if s in HUMAN_REVIEW_STAGES]
+    decisions = []
+    for i, stage in enumerate(reviews):
+        rejected = expected.get("status") == "rejected" and i == len(reviews) - 1
+        decision = "rejected" if rejected else "approved"
+        decisions.append({"stage": stage, "decision": decision,
+                          "reasoning": f"{decision.capitalize()} at {stage}"})
+    return decisions
 
 
 def _instantiate_evaluators():
@@ -123,10 +144,7 @@ def run_three_layer_evaluation(dataset=None):
             "risk_level": expected.get("risk_level", ""),
             "approval_path": expected.get("approval_path", []),
             "human_reviews": expected.get("human_reviews", 0),
-            "decisions": expected.get("decisions", [
-                {"stage": stage, "decision": "approved", "reasoning": "Auto-generated"}
-                for stage in expected.get("approval_path", [])
-            ]),
+            "decisions": expected.get("decisions", _review_decisions(expected)),
         }
 
         for name, evaluator in evaluators.items():
