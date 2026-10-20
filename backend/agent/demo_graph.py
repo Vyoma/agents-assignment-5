@@ -52,7 +52,9 @@ def demo_submit(state: ApprovalState) -> dict:
         "manager_approved": None, "manager_comments": "",
         "finance_approved": None, "finance_comments": "",
         "final_approved": None, "final_comments": "",
-        "department_budget": 0, "budget_remaining": 0, "within_budget": True,
+        # None, not 0: high/critical skip the budget check, and the Approval
+        # Panel shows "Not checked" only when department_budget is None.
+        "department_budget": None, "budget_remaining": None, "within_budget": None,
         "current_stage": "risk_assessment",
         "status": "pending",
         "messages": [

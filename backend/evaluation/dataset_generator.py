@@ -221,6 +221,9 @@ def upload_to_langsmith(dataset, dataset_name="financial-approval-eval"):
 
     TODO (4 points):
     - Import langsmith and create a Client: client = langsmith.Client()
+      (it reads LANGSMITH_API_KEY from the environment. Importing backend.config
+      loads .env; if nothing has loaded it, the client sends no key and
+      LangSmith answers 401 "Invalid token")
     - Create a new dataset: ls_dataset = client.create_dataset(dataset_name=dataset_name)
       (use a new name; the `dataset` argument is your list of test cases)
     - For each test case in the dataset, create an example:

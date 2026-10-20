@@ -1,5 +1,5 @@
 """
-Evaluation package for LangSmith-based testing.
+Evaluation package: LangSmith-style evaluators, run locally.
 
 Modules:
   evaluators          — Part 4: Risk accuracy + approval consistency (20 pts)

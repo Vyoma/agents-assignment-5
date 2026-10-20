@@ -1,8 +1,10 @@
 """
 Evaluation runner for the Financial Approval System.
 
-Runs the evaluation pipeline using LangSmith to measure
-risk assessment accuracy and approval consistency.
+Runs the Part 4 evaluators (risk assessment accuracy and approval
+consistency) locally over the 12-case dataset. It makes no LLM calls and
+sends nothing to LangSmith. LangSmith traces come from the running server
+(python -m backend.server) when LANGSMITH_API_KEY holds a real key.
 """
 
 import os
@@ -19,7 +21,8 @@ def run_evaluation():
     Run the evaluation pipeline.
 
     This function:
-    1. Sets up LangSmith tracing
+    1. Sets the LangChain tracing variables (nothing in this runner is traced:
+       the evaluators are plain functions; traces come from the server)
     2. Creates evaluator instances
     3. Scores each test case's expected values against themselves (the
        workflow is NOT run here), which checks your evaluator logic only:

@@ -2,7 +2,10 @@
 Custom LangSmith evaluators for the Financial Approval System.
 
 Students implement evaluator factory functions that return callables
-compatible with LangSmith's evaluation framework.
+taking LangSmith-style arguments (inputs, outputs, reference_outputs).
+run_eval.py calls them directly, on your machine; nothing is sent to LangSmith.
+(If you later pass them to langsmith.evaluate(), give each inner function its
+own name: LangSmith uses the function name as the feedback key.)
 
 Part 4: LangSmith Tracing + Evaluation (20 points)
 """

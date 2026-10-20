@@ -140,7 +140,7 @@ flowchart TD
 - Python 3.11+
 - Node.js 22 LTS (22.15 or newer: some of the pinned frontend dependencies declare `node >=22.15.0`)
 - OpenAI API key (or Google Gemini API key)
-- LangSmith API key (for Part 4)
+- LangSmith API key (for server tracing and `upload_to_langsmith` in Part 5)
 
 ## Setup
 
@@ -160,6 +160,8 @@ cp .env.example .env
 ```
 
 In `.env`, set the key for the provider you use. OpenAI (the default): set `OPENAI_API_KEY`. Gemini: set `LLM_PROVIDER=google` and `GOOGLE_API_KEY` (and `GOOGLE_MODEL` if you want a different model); without `LLM_PROVIDER=google`, `get_llm()` still uses OpenAI and your Gemini key is ignored. Read LLM replies with `response.text`, not `response.content`: Gemini returns `content` as a list of content blocks, and `.text` is a plain string for both providers.
+
+Also replace `LANGSMITH_API_KEY` with your real key, or delete that line: with the placeholder from `.env.example`, the server still works but logs `403 Client Error: Forbidden` errors from LangSmith while requests run, because it tries to send traces with an invalid key.
 
 ### 2. Frontend
 
@@ -192,7 +194,7 @@ npm run dev
 
 Open **http://localhost:3000** in your browser to interact with the Financial Approval System.
 
-> **Note:** Before you implement your graph, the server automatically loads a **demo graph** (`backend/agent/demo_graph.py`) so you can see the frontend and HITL interrupt flow in action. The demo has all three interrupts and the same routing as the assignment, but it scores risk from the amount alone (no LLM), so its risk levels can differ from the eval dataset. Submit a request of $10,000 or more with the **+ New Approval Request** form and the approval modal appears. Once you implement `create_approval_graph()`, the server switches to your full graph automatically.
+> **Note:** Before you implement your graph, the server automatically loads a **demo graph** (`backend/agent/demo_graph.py`) so you can see the frontend and HITL interrupt flow in action. The demo has all three interrupts and the same routing as the assignment, but it scores risk from the amount alone (no LLM) and skips input validation, so its risk levels can differ from the eval dataset and invalid requests are not rejected. Submit a request of $10,000 or more with the **+ New Approval Request** form and the approval modal appears. Once you implement `create_approval_graph()`, the server switches to your full graph automatically.
 
 ### How it Works End-to-End
 
@@ -394,6 +396,9 @@ The frontend needs the backend running (`python -m backend.server`) to function.
    - Match → score 1.0
    - Mismatch → score 0.0
 
+### Tracing
+With a real `LANGSMITH_API_KEY` in `.env`, the server (`python -m backend.server`) sends a trace of every workflow run, including the `assess_risk` LLM call and each interrupt, to the LangSmith project named by `LANGSMITH_PROJECT`. The evaluation runners below send no traces.
+
 ### Running Evaluation
 ```bash
 python -m backend.evaluation.run_eval
@@ -498,10 +503,10 @@ python -m backend.evaluation.run_three_layer_eval
 - [LangGraph Human-in-the-Loop](https://langchain-ai.github.io/langgraph/concepts/human_in_the_loop/)
 - [LangGraph interrupt() API](https://langchain-ai.github.io/langgraph/reference/types/#langgraph.types.interrupt)
 - [CopilotKit Documentation](https://docs.copilotkit.ai/)
-- [CopilotKit useLangGraphInterrupt](https://docs.copilotkit.ai/reference/hooks/useLangGraphInterrupt)
+- [CopilotKit useLangGraphInterrupt](https://docs.copilotkit.ai/reference/v1/hooks/useLangGraphInterrupt)
 - [LangSmith Evaluation](https://docs.smith.langchain.com/evaluation)
 - [RAGAS Agent Evaluation](https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/agents/)
-- [RAGAS LangGraph Integration](https://docs.ragas.io/en/latest/howtos/integrations/langgraph/)
+- [RAGAS LangGraph Integration](https://docs.ragas.io/en/latest/howtos/integrations/_langgraph_agent_evaluation/)
 
 ## Submission
 

@@ -6,9 +6,13 @@ Students implement evaluator factory functions across three layers:
   Layer 2 — Agent Performance (RAGAS metrics, 12 pts)
   Layer 3 — Safety & Compliance (RAGAS + heuristic, 12 pts)
 
-Each factory returns a callable with the LangSmith evaluator signature:
+Each factory returns a callable that takes LangSmith-style arguments
+(inputs, outputs, reference_outputs) and returns {"score", "reasoning"}:
     def evaluator(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
         return {"score": float, "reasoning": str}
+run_three_layer_eval.py calls them directly, on your machine. Keep this return
+format: the tests and the runner read it. (langsmith.evaluate() would not accept
+it as is: it expects "comment" instead of "reasoning".)
 
 Part 5: Three-Layer Evaluation Framework (34 points)
 """

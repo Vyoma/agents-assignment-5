@@ -47,6 +47,9 @@ def submit_request(state: ApprovalState) -> dict:
       reuses one thread for every request in a chat session, so old values are still in
       the checkpoint (a request rejected here never runs assess_risk, so without the reset
       it would report the previous request's risk_level)
+    - Reset department_budget / budget_remaining / within_budget to None, not 0: high and
+      critical requests skip validate_budget, and the Approval Panel shows "Not checked"
+      only when department_budget is None (0 shows "$0, Within budget")
     """
     raise NotImplementedError("TODO: Implement submit_request node (3 points)")
 
@@ -68,7 +71,9 @@ def assess_risk(state: ApprovalState) -> dict:
     - Use response = get_llm().invoke([HumanMessage(content=prompt)])
     - Read the reply with response.text (a property: no parentheses), not response.content.
       Gemini returns content as a list of content blocks, so re.search() or json.loads()
-      on response.content raises TypeError; .text is a plain string for OpenAI and Gemini
+      on response.content raises TypeError, and `"low" in response.content` is silently
+      False (every request falls back to "medium"); .text is a plain string for OpenAI
+      and Gemini
     - The LLM should return one of: "low", "medium", "high", "critical"
     - Default to "medium" if parsing fails
     - Give the LLM the rules the eval dataset is labelled with

@@ -2,8 +2,8 @@
 Runner for the Three-Layer Evaluation Framework.
 
 Imports all evaluator factories, runs them against a dataset,
-and prints a report card grouped by layer. Supports both
-LangSmith-hosted and local evaluation modes.
+and prints a report card grouped by layer. Runs locally: it sends
+nothing to LangSmith.
 
 This file is GIVEN — students do not modify it.
 """
