@@ -519,5 +519,5 @@ python -m backend.evaluation.run_three_layer_eval
 
 - Your score and feedback are posted in **Canvas** (SpeedGrader), on your Assignment 5 submission
 - The commit on `main` at the time you submit on Canvas is the one that is graded. Pushes after you submit are not graded unless you resubmit on Canvas
-- After your grade is posted, you get **one update**: push your changes and resubmit the link on Canvas, any time until **Nov 4, 11:59 PM PT**. The resubmitted version is regraded with no late penalty, and that grade is final
+- After you submit, you get **one update**: push your changes and resubmit the link on Canvas, any time until **Nov 4, 11:59 PM PT**. The resubmitted version is regraded with no late penalty, and that grade is final
 - The GitHub Actions workflow in this repository is not used for grades. Nothing opens a Pull Request or posts a score on GitHub, so you will not find results in the **Pull Requests** or **Actions** tabs
