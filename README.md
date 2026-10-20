@@ -202,12 +202,14 @@ Open **http://localhost:3000** in your browser to interact with the Financial Ap
    - **Risk Assessment** → LLM evaluates risk level (low/medium/high/critical)
    - **Manager Review** (medium/high/critical, or low over budget) → workflow **pauses** (interrupt) → **Approval Panel appears** in browser
    - **Budget Validation** (low/medium only) → checks against department budget limits
-   - **Finance Review** (high/critical, or medium over budget) → workflow **pauses** again → **Approval Panel appears** (budget figures are only filled in when Budget Validation ran)
+   - **Finance Review** (high/critical, or medium over budget) → workflow **pauses** again → **Approval Panel appears** (budget figures appear only when Budget Validation ran; for high and critical requests the panel says the budget was not checked)
    - **Final Sign-off** (critical only) → workflow **pauses** one last time → **Approval Panel shows the decision chain**
    - **Process/Reject** → final result based on all approval decisions
 3. At each interrupt, the **Approval Panel modal** pops up showing request details
 4. Click **Approve** or **Reject** with comments to resume the workflow
 5. The graph continues to the next stage or terminates with rejection
+
+> **Note:** The **Workflow Progress** and **Request History** panels in the sidebar are static placeholders in this starter: they are not connected to the graph state, so they do not change while a request runs. Follow progress in the chat messages and the Approval Panel. Wiring them up is optional and not graded.
 
 ## Project Structure
 
@@ -503,14 +505,14 @@ python -m backend.evaluation.run_three_layer_eval
 
 ## Submission
 
-This assignment uses **GitHub Classroom**. Your work is submitted by pushing to your repository's `main` branch.
-
-1. Run the tests and both evaluation runners (see **Running Tests** and **Useful Commands** above)
-2. Commit and push your changes to `main`
-3. Go to your repository page on GitHub and confirm all files are present
+1. **Fork** this repository to your own GitHub account and do your work there. If your repository is private, add **Vyoma** as a collaborator so it can be graded
+2. Run the tests and both evaluation runners (see **Running Tests** and **Useful Commands** above)
+3. Commit and push your changes to `main`, then check on GitHub that all files are present
+4. Submit your repository link on **Canvas** (Assignment 5)
 
 ### How Grading Works
 
 - Your score and feedback are posted in **Canvas** (SpeedGrader), on your Assignment 5 submission
+- The commit on `main` at the time you submit on Canvas is the one that is graded. Pushes after you submit are not graded unless you resubmit on Canvas
+- After your grade is posted, you get **one update**: push your changes and resubmit the link on Canvas, any time until **Nov 4, 11:59 PM PT**. The resubmitted version is regraded with no late penalty, and that grade is final
 - The GitHub Actions workflow in this repository is not used for grades. Nothing opens a Pull Request or posts a score on GitHub, so you will not find results in the **Pull Requests** or **Actions** tabs
-- You can push multiple times before the deadline

@@ -87,6 +87,13 @@ function ApprovalModal({
           {data.type === "finance_review" && (
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <p className="text-sm font-semibold text-gray-700">Budget Information</p>
+              {/* High and critical requests skip validate_budget, so these fields can be missing */}
+              {data.department_budget == null ? (
+                <p className="text-sm text-gray-500">
+                  Not checked: high and critical requests skip Budget Validation.
+                </p>
+              ) : (
+              <>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="text-gray-500">Department Budget:</span>
@@ -107,6 +114,8 @@ function ApprovalModal({
                   {data.within_budget ? "Within budget" : "Exceeds budget"}
                 </span>
               </div>
+              </>
+              )}
               {data.manager_comments && (
                 <div className="mt-2 pt-2 border-t">
                   <p className="text-xs text-gray-500">Manager Comments:</p>
